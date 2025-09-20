@@ -1,15 +1,55 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
+/*== DOCTOR DIRECTORY SYSTEM ==============================================
+This section creates the data models for a doctor directory system in a building.
+It includes Doctor, Office, and Specialty models with relationships between them.
+The authorization rule allows public API key access for directory operations.
 =========================================================================*/
 const schema = a.schema({
-  Todo: a
+  Doctor: a
     .model({
-      content: a.string(),
+      firstName: a.string().required(),
+      lastName: a.string().required(),
+      title: a.string(), // Dr., Prof., etc.
+      email: a.email(),
+      phone: a.phone(),
+      officeId: a.id(),
+      specialtyId: a.id(),
+      isAvailable: a.boolean().default(true),
+      biography: a.string(),
+      profileImage: a.url(),
+      office: a.belongsTo("Office", "officeId"),
+      specialty: a.belongsTo("Specialty", "specialtyId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+  
+  Office: a
+    .model({
+      roomNumber: a.string().required(),
+      floor: a.integer().required(),
+      building: a.string().required(),
+      description: a.string(),
+      capacity: a.integer(),
+      amenities: a.string().array(), // e.g., ["wheelchair accessible", "waiting room"]
+      doctors: a.hasMany("Doctor", "officeId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+  
+  Specialty: a
+    .model({
+      name: a.string().required(),
+      description: a.string(),
+      department: a.string(),
+      doctors: a.hasMany("Doctor", "specialtyId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+    
+  DirectoryQuery: a
+    .model({
+      query: a.string().required(),
+      searchType: a.enum(["doctor", "specialty", "office", "general"]),
+      results: a.json(), // Store AI agent results
+      timestamp: a.timestamp(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 });
@@ -27,31 +67,10 @@ export const data = defineData({
   },
 });
 
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
+/*== AI AGENT INTEGRATION ================================================
+The doctor directory system includes an AI agent that can:
+1. Search for doctors by name, specialty, or availability
+2. Find office locations and room numbers
+3. Provide information about medical specialties
+4. Answer general questions about the building directory
 =========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
